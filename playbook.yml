@@ -1,0 +1,36 @@
+---
+  - name: Webservers
+    hosts: hpt620
+    become: true
+    vars_files:
+      - vault.yml
+    vars:
+      ansible_become_pass: '{{ vault_sudo_password }}'
+
+    tasks:
+      - name: Ensure SMB package is present.
+        ansible.builtin.apt:
+          name: 
+          - samba
+          update_cache: true
+
+      - name: Ensure SMB is started and enabled.
+        ansible.builtin.service:
+          name: samba
+          state: started
+          enabled: true
+
+      - name: Copy SMB config to smb config
+        ansible.builtin.copy:
+          src: samba.conf
+          dest: /etc/samba/smb.conf
+      - name: Allow UFW for samba
+        ansible.legacy.shell: "ufw allow samba"
+      - name: Make new smb password
+        ansible.builtin.command:
+          cmd:  "/usr/bin/smbpasswd -s -a anselmos"
+          stdin: |
+            {{ smbuser_password }}
+            {{ smbuser_password }}
+      - name: Restart SMB
+        ansible.builtin.command: "service smbd restart"
